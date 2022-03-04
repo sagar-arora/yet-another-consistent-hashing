@@ -69,21 +69,70 @@ public class ConsistentHashingImpl<T extends Node> implements ConsistentHashing<
 
     @Override
     public Set<T> getNodes() {
-        return null;
+        return nodes.keySet();
     }
 
     @Override
     public Optional<T> locate(String key) {
-        return Optional.empty();
+        if (ring.isEmpty()) {
+            return Optional.empty();
+        }
+        return locate(key, 1).stream().findFirst();
     }
 
     @Override
     public Set<T> locate(String key, int count) {
-        return null;
+        Set<T> result = new LinkedHashSet<>();
+
+        if (key != null && count > 0) {
+            long hash = hasher.getHash(key, 1);
+            if (count < nodes.size()) {
+                CircularIterator circularIterator = new CircularIterator(hash);
+
+                while (circularIterator.hasNext()) {
+                    Partition<T> partition = circularIterator.next();
+                    result.add(partition.getNode());
+                }
+            } else {
+                result.addAll(nodes.keySet());
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", ConsistentHashingImpl.class.getSimpleName() + "[", "]")
+                .add("nodes= " + nodes.size())
+                .add("hasher= " + hasher)
+                .add("multiplicity= " + multiplicity)
+                .toString();
     }
 
     @Override
     public int size() {
         return nodes.size();
+    }
+
+    class CircularIterator implements Iterator<Partition<T>> {
+
+        private final Iterator<Partition<T>> tail;
+        private final Iterator<Partition<T>> head;
+
+        public CircularIterator(long slot) {
+            head = ring.headMap(slot, false).values().iterator();
+            tail = ring.tailMap(slot, true).values().iterator();
+        }
+
+        @Override
+        public boolean hasNext() {
+            return tail.hasNext() || head.hasNext();
+        }
+
+        @Override
+        public Partition<T> next() {
+            return tail.hasNext() ? tail.next() : head.next();
+        }
     }
 }

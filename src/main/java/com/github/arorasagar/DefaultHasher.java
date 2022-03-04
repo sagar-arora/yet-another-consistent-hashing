@@ -2,26 +2,21 @@ package com.github.arorasagar;
 
 import net.openhft.hashing.LongHashFunction;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.util.Comparator;
+import java.util.function.Function;
 
 public enum DefaultHasher implements Hasher {
 
-    MURMUR_HASH(LongHashFunction.murmur_3());
+    MURMUR_HASH(LongHashFunction::murmur_3);
 
-    LongHashFunction longHashFunction;
-    DefaultHasher(LongHashFunction longHashFunction) {
-        this.longHashFunction = longHashFunction;
-    }
+    Function<Long, LongHashFunction> hashFunction;
 
-    long getHash(String key) {
-
-        return -1;
+    DefaultHasher(Function<Long, LongHashFunction> hashFunction) {
+        this.hashFunction = hashFunction;
     }
 
     @Override
-    public long getHash(String key, int seed) {
-        return 0;
+    public long getHash(String key, long seed) {
+        return hashFunction.apply(seed).hashChars(key);
     }
 }
